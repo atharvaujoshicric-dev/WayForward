@@ -1,1189 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Real Estate Media Plan & PPT Generator</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- React & Babel -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SKYLUXE — Way Forward Media Plan Studio</title>
 
-  <!-- PptxGenJS for PowerPoint generation -->
-  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<!-- Tailwind CSS (utility classes used alongside css/style.css) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- PptxGenJS -->
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #0b0f19;
-      color: #e2e8f0;
-    }
-    .gold-gradient {
-      background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%);
-    }
-    .gold-text {
-      background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .glass-card {
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-  </style>
+<link rel="stylesheet" href="css/style.css" />
 </head>
-<body class="min-h-screen custom-scrollbar">
-  <div id="root"></div>
-
-  <script type="text/babel">
-    const { useState, useMemo, useEffect, useRef } = React;
-
-    // Formatting helpers
-    const formatINR = (val) => {
-      if (isNaN(val) || val === null || val === undefined) return "₹0";
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 0
-      }).format(Math.round(val));
-    };
-
-    const formatNum = (val, dec = 0) => {
-      if (isNaN(val) || val === null || val === undefined) return "0";
-      return Number(val).toLocaleString('en-IN', { maximumFractionDigits: dec, minimumFractionDigits: dec });
-    };
-
-    function App() {
-      const [activeTab, setActiveTab] = useState('planner'); // 'planner' | 'deck'
-      const [currentSlide, setCurrentSlide] = useState(1);
-
-      // --- Planning State Inputs ---
-      const [projectName, setProjectName] = useState("SKYLUXE");
-      const [durationMonths, setDurationMonths] = useState(3);
-      const [monthNames, setMonthNames] = useState(["August", "September", "October"]);
-      const [avgTicketSize, setAvgTicketSize] = useState(9700000); // 97 Lakhs
-      const [conversionRatio, setConversionRatio] = useState(9.0); // 9% booking to visit
-
-      // Target Bookings per month (PS, Direct, CP)
-      const [bookingsPS, setBookingsPS] = useState([3, 4, 5]);
-      const [bookingsDirect, setBookingsDirect] = useState([3, 2, 3]);
-      const [bookingsCP, setBookingsCP] = useState([7, 8, 8]);
-
-      // Digital CPL benchmarks per month
-      const [cplPerMonth, setCplPerMonth] = useState([1200, 1150, 1150]);
-
-      // Fixed offline & branding expense line items
-      const [expenses, setExpenses] = useState({
-        socialBoosting: 45000,
-        droneShoot: 75000,
-        ugcVideos: 50000,
-        developerByte: 45000,
-        chatbotWhatsapp: 70000,
-        societyActivation: 250000,
-        hoardings: 1140000, // 4 hoardings * 3 months * 95k
-        kiosks: 90000,
-        leafletActivity: 150000,
-        cpGathering: 110000,
-        cpVisitIncentivePerVisit: 600,
-        cpBookingIncentivePerBooking: 25000,
-        cpBrokeragePct: 3.0,
-      });
-
-      // Preset handlers
-      const loadSkyluxePlan = () => {
-        setProjectName("SKYLUXE");
-        setMonthNames(["August", "September", "October"]);
-        setBookingsPS([3, 4, 5]);
-        setBookingsDirect([3, 2, 3]);
-        setBookingsCP([7, 8, 8]);
-        setCplPerMonth([1200, 1150, 1150]);
-        setAvgTicketSize(9700000);
-        setConversionRatio(9.0);
-      };
-
-      const load20BookingPlan = () => {
-        setProjectName("SKYLUXE Fast-Track");
-        setMonthNames(["Month 1", "Month 2", "Month 3"]);
-        // 6 - 6 - 8 target distribution (Total 20 bookings)
-        setBookingsPS([2, 2, 2]);
-        setBookingsDirect([1, 1, 2]);
-        setBookingsCP([3, 3, 4]);
-        setCplPerMonth([1200, 1150, 1150]);
-        setAvgTicketSize(9500000);
-        setConversionRatio(9.0);
-      };
-
-      // --- Calculation Engine ---
-      const calculations = useMemo(() => {
-        const convRate = (conversionRatio || 9.0) / 100;
-
-        // 1. Monthly Totals & Visits
-        const monthlyData = monthNames.map((name, i) => {
-          const psB = Number(bookingsPS[i]) || 0;
-          const dirB = Number(bookingsDirect[i]) || 0;
-          const cpB = Number(bookingsCP[i]) || 0;
-          const totalB = psB + dirB + cpB;
-
-          const psVisits = psB / convRate;
-          const dirVisits = dirB / convRate;
-          const cpVisits = cpB / convRate;
-          const totalVisits = psVisits + dirVisits + cpVisits;
-          const revisits = totalVisits * 0.22;
-
-          // Digital Funnel
-          const svs = psVisits * 2;
-          const qualLeads = svs * 2;
-          const totalLeads = qualLeads / 0.38;
-          const cpl = Number(cplPerMonth[i]) || 1150;
-          const digitalLgSpends = totalLeads * cpl;
-          const brandingSpends = digitalLgSpends * 0.12;
-          const totalDigitalSpends = digitalLgSpends + brandingSpends;
-          const cpql = qualLeads > 0 ? digitalLgSpends / qualLeads : 0;
-
-          return {
-            month: name,
-            psB, dirB, cpB, totalB,
-            psVisits, dirVisits, cpVisits, totalVisits, revisits,
-            svs, qualLeads, totalLeads, cpl,
-            digitalLgSpends, brandingSpends, totalDigitalSpends, cpql
-          };
-        });
-
-        // 2. Aggregate Totals
-        const totalBookingsPS = bookingsPS.reduce((a, b) => a + Number(b || 0), 0);
-        const totalBookingsDirect = bookingsDirect.reduce((a, b) => a + Number(b || 0), 0);
-        const totalBookingsCP = bookingsCP.reduce((a, b) => a + Number(b || 0), 0);
-        const totalBookings = totalBookingsPS + totalBookingsDirect + totalBookingsCP;
-
-        const totalVisitsPS = totalBookingsPS / convRate;
-        const totalVisitsDirect = totalBookingsDirect / convRate;
-        const totalVisitsCP = totalBookingsCP / convRate;
-        const totalVisits = totalVisitsPS + totalVisitsDirect + totalVisitsCP;
-        const totalRevisits = totalVisits * 0.22;
-
-        const totalSVS = totalVisitsPS * 2;
-        const totalQualLeads = totalSVS * 2;
-        const totalLeads = totalQualLeads / 0.38;
-
-        const totalDigitalLgSpends = monthlyData.reduce((a, b) => a + b.digitalLgSpends, 0);
-        const totalBrandingSpends = monthlyData.reduce((a, b) => a + b.brandingSpends, 0);
-        const totalDigitalSpends = totalDigitalLgSpends + totalBrandingSpends;
-        const blendedCpl = totalLeads > 0 ? totalDigitalLgSpends / totalLeads : 0;
-        const blendedCpql = totalQualLeads > 0 ? totalDigitalLgSpends / totalQualLeads : 0;
-
-        // 3. Digital Objective Split
-        const objectiveSplit = {
-          leadGen: { leads: totalLeads * 0.83, spends: totalDigitalLgSpends * 0.85 },
-          branding: { leads: 0, spends: totalBrandingSpends },
-          remarketing: { leads: totalLeads * 0.105, spends: totalDigitalLgSpends * 0.15 },
-          organic: { leads: totalLeads * 0.065, spends: 0 }
-        };
-
-        // 4. Platform Breakdown
-        const platforms = [
-          { name: "Facebook / Meta", share: 0.625, cpl: 1096, audience: "Interest + Pindrop + Lookalike + Demography" },
-          { name: "Google Pmax + Demand Gen", share: 0.15, cpl: 1632, audience: "Inmarket + Custom Intent + Lookalike" },
-          { name: "Google Search", share: 0.10, cpl: 1265, audience: "High-intent Location & Competitor keywords" },
-          { name: "Experimental (LinkedIn/Taboola)", share: 0.075, cpl: 1855, audience: "Job Profiles, Corporate Hubs, Native" },
-          { name: "NRI Campaigns (USA + GCC)", share: 0.05, cpl: 2134, audience: "Special Expats + Real Estate Intent" }
-        ].map(p => {
-          const budget = totalDigitalLgSpends * p.share;
-          const leads = budget / p.cpl;
-          return { ...p, budget, leads };
-        });
-
-        // 5. Total Revenue & Detailed Marketing Bifurcation
-        const totalRevenue = totalBookings * Number(avgTicketSize || 0);
-        const cpIncentivesTotal = (totalVisitsCP * expenses.cpVisitIncentivePerVisit) + (totalBookingsCP * expenses.cpBookingIncentivePerBooking);
-        const cpBrokerageVal = totalRevenue * ((Number(expenses.cpBrokeragePct) || 3.0) / 100);
-
-        const fullExpenseItems = [
-          { category: "Digital", item: "Social Media Lead Generation", desc: "Meta, Google Pmax, Search, Taboola", cost: totalDigitalLgSpends },
-          { category: "Digital", item: "Branding & Awareness", desc: "Video views, display reach, engagement", cost: totalBrandingSpends },
-          { category: "Digital", item: "Social Boosting", desc: "Paid social content boost", cost: expenses.socialBoosting },
-          { category: "Content", item: "Construction Drone & Location Shoot", desc: "Influencer walkthrough and project aerials", cost: expenses.droneShoot },
-          { category: "Content", item: "UGC Influencer Videos", desc: "10 high-impact creator reels", cost: expenses.ugcVideos },
-          { category: "Content", item: "Developer & Architect Bytes", desc: "Testimonials and credibility videos", cost: expenses.developerByte },
-          { category: "Tech", item: "Website Chatbot + WhatsApp API", desc: "Lead capture & automated nurturing", cost: expenses.chatbotWhatsapp },
-          { category: "OOH", item: "Society & Mall Activations", desc: "High-density residential lead generation", cost: expenses.societyActivation },
-          { category: "OOH", item: "Hoardings / Billboards", desc: "Prime outdoor presence in target clusters", cost: expenses.hoardings },
-          { category: "OOH", item: "Kiosks & Wayboards", desc: "Micro-market route branding", cost: expenses.kiosks },
-          { category: "OOH", item: "Newspaper Leaflet Activity", desc: "Targeted localized newspaper inserts", cost: expenses.leafletActivity },
-          { category: "Channel Partner", item: "CP Gathering & Orientation", desc: "On-site broker meet & project launch", cost: expenses.cpGathering },
-          { category: "Channel Partner", item: "CP Visit & Booking Incentives", desc: "Structured performance rewards", cost: cpIncentivesTotal }
-        ];
-
-        const totalAdvertisingBudget = fullExpenseItems.reduce((a, b) => a + b.cost, 0);
-        const advertisingCostPct = totalRevenue > 0 ? (totalAdvertisingBudget / totalRevenue) * 100 : 0;
-        const totalMarketingCostPct = advertisingCostPct + (Number(expenses.cpBrokeragePct) || 3.0);
-
-        // 6. CP Activations
-        const cpActivationData = monthNames.map((m, i) => {
-          const catA = [12, 15, 15][i] || 12;
-          const catB = [22, 24, 26][i] || 22;
-          const physicalMeetings = (catA + catB) * 1.8;
-          const whatsappOutreach = physicalMeetings * 4;
-          const digitalReach = [650, 720, 750][i] || 700;
-          return {
-            month: m,
-            catA, catB, physicalMeetings, whatsappOutreach, digitalReach,
-            visits: monthlyData[i].cpVisits,
-            bookings: monthlyData[i].cpB
-          };
-        });
-
-        return {
-          monthlyData,
-          totalBookingsPS, totalBookingsDirect, totalBookingsCP, totalBookings,
-          totalVisitsPS, totalVisitsDirect, totalVisitsCP, totalVisits, totalRevisits,
-          totalSVS, totalQualLeads, totalLeads,
-          totalDigitalLgSpends, totalBrandingSpends, totalDigitalSpends,
-          blendedCpl, blendedCpql,
-          objectiveSplit, platforms,
-          totalRevenue, fullExpenseItems, totalAdvertisingBudget,
-          advertisingCostPct, totalMarketingCostPct,
-          cpIncentivesTotal, cpActivationData
-        };
-      }, [
-        monthNames, bookingsPS, bookingsDirect, bookingsCP, conversionRatio,
-        cplPerMonth, avgTicketSize, expenses
-      ]);
-
-      // --- Export PPTX Engine ---
-      const handleDownloadPPT = () => {
-        const pptx = new PptxGenJS();
-        pptx.layout = 'LAYOUT_16x9';
-
-        const C_DARK = "0F172A";
-        const C_GOLD = "D97706";
-        const C_LIGHT = "F8FAFC";
-        const C_SLATE = "334155";
-        const C_TEXT = "1E293B";
-
-        // Helper: Add Standard Header
-        const addHeader = (slide, title, subtitle) => {
-          slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.1, fill: { color: C_DARK } });
-          slide.addText(title, { x: 0.8, y: 0.18, fontSize: 22, color: "FFFFFF", bold: true });
-          slide.addText(subtitle, { x: 0.8, y: 0.65, fontSize: 12, color: C_GOLD, bold: false });
-        };
-
-        // Slide 1: Cover
-        const s1 = pptx.addSlide();
-        s1.background = { color: C_DARK };
-        s1.addShape(pptx.ShapeType.rect, { x: 1.0, y: 1.5, w: 0.15, h: 4.2, fill: { color: C_GOLD } });
-        s1.addText(projectName.toUpperCase(), { x: 1.4, y: 1.6, fontSize: 44, color: "FFFFFF", bold: true });
-        s1.addText("WAY FORWARD MARKETING & SALES STRATEGY", { x: 1.4, y: 2.6, fontSize: 20, color: C_GOLD, bold: true });
-        s1.addText(`Strategic Execution Plan | ${monthNames.join(" - ")}`, { x: 1.4, y: 3.3, fontSize: 14, color: "94A3B8" });
-        s1.addText([
-          { text: `Target Bookings: `, options: { bold: true, color: "FFFFFF" } },
-          { text: `${calculations.totalBookings} Units  |  `, options: { color: C_GOLD } },
-          { text: `Total Revenue: `, options: { bold: true, color: "FFFFFF" } },
-          { text: `${formatINR(calculations.totalRevenue)}  |  `, options: { color: C_GOLD } },
-          { text: `Duration: `, options: { bold: true, color: "FFFFFF" } },
-          { text: `${durationMonths} Months`, options: { color: C_GOLD } }
-        ], { x: 1.4, y: 4.5, fontSize: 13 });
-
-        // Slide 2: Wayforward Strategy & Targets
-        const s2 = pptx.addSlide();
-        addHeader(s2, "Wayforward Strategy & Sourcing Targets", `${projectName} - 90 Days Growth Blueprint`);
-        s2.addTable([
-          [
-            { text: "Channel Source", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Estimated Leads", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Estimated Walk-ins", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Target Bookings", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Contribution %", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } }
-          ],
-          ["Digital / Presales", formatNum(calculations.totalLeads), formatNum(calculations.totalVisitsPS), formatNum(calculations.totalBookingsPS), `${((calculations.totalBookingsPS / calculations.totalBookings) * 100).toFixed(0)}%`],
-          ["OOH / Direct Walk-ins", "As per Branding", formatNum(calculations.totalVisitsDirect), formatNum(calculations.totalBookingsDirect), `${((calculations.totalBookingsDirect / calculations.totalBookings) * 100).toFixed(0)}%`],
-          ["Channel Partners", "As per Outreach", formatNum(calculations.totalVisitsCP), formatNum(calculations.totalBookingsCP), `${((calculations.totalBookingsCP / calculations.totalBookings) * 100).toFixed(0)}%`],
-          [
-            { text: "Total Projected", options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: formatNum(calculations.totalLeads), options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: formatNum(calculations.totalVisits), options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: formatNum(calculations.totalBookings), options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: "100%", options: { bold: true, fill: { color: "F1F5F9" } } }
-          ]
-        ], { x: 0.8, y: 1.6, w: 11.73, fontSize: 12, border: { pt: 1, color: "CBD5E1" } });
-
-        // Slide 3: Month-Wise Performance Funnel
-        const s3 = pptx.addSlide();
-        addHeader(s3, "Month-Wise Funnel Targets", "Granular Monthly Performance & Conversion Cascade");
-        const funnelHeaders = ["Metric", ...monthNames, "Total Projected"];
-        const funnelRows = [
-          ["Total Marketing Spends", ...calculations.monthlyData.map(m => formatINR(m.totalDigitalSpends)), formatINR(calculations.totalDigitalSpends)],
-          ["Digital Lead Gen Spends", ...calculations.monthlyData.map(m => formatINR(m.digitalLgSpends)), formatINR(calculations.totalDigitalLgSpends)],
-          ["Branding Spends (12%)", ...calculations.monthlyData.map(m => formatINR(m.brandingSpends)), formatINR(calculations.totalBrandingSpends)],
-          ["Total Digital Leads", ...calculations.monthlyData.map(m => formatNum(m.totalLeads)), formatNum(calculations.totalLeads)],
-          ["Cost Per Lead (CPL)", ...calculations.monthlyData.map(m => formatINR(m.cpl)), formatINR(calculations.blendedCpl)],
-          ["Qualified Leads (38%)", ...calculations.monthlyData.map(m => formatNum(m.qualLeads)), formatNum(calculations.totalQualLeads)],
-          ["Presales Visits (Site Visits)", ...calculations.monthlyData.map(m => formatNum(m.psVisits)), formatNum(calculations.totalVisitsPS)],
-          ["Direct / Walk-in Visits", ...calculations.monthlyData.map(m => formatNum(m.dirVisits)), formatNum(calculations.totalVisitsDirect)],
-          ["Channel Partner Visits", ...calculations.monthlyData.map(m => formatNum(m.cpVisits)), formatNum(calculations.totalVisitsCP)],
-          ["Total Site Visits", ...calculations.monthlyData.map(m => formatNum(m.totalVisits)), formatNum(calculations.totalVisits)],
-          ["Revisits (22%)", ...calculations.monthlyData.map(m => formatNum(m.revisits)), formatNum(calculations.totalRevisits)],
-          ["Total Bookings Converted", ...calculations.monthlyData.map(m => formatNum(m.totalB)), formatNum(calculations.totalBookings)]
-        ];
-        s3.addTable([
-          funnelHeaders.map(h => ({ text: h, options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } })),
-          ...funnelRows
-        ], { x: 0.8, y: 1.4, w: 11.73, fontSize: 10, border: { pt: 0.5, color: "E2E8F0" } });
-
-        // Slide 4: Digital Objective & Platform Allocation
-        const s4 = pptx.addSlide();
-        addHeader(s4, "Digital Marketing & Platform Allocation", "Budget Dispersion across Multi-Tier Channels");
-        s4.addTable([
-          [
-            { text: "Channel / Platform", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Target Audience & Optimization Strategy", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Est. CPL", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Leads", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Budget (INR)", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Share", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } }
-          ],
-          ...calculations.platforms.map(p => [
-            p.name, p.audience, formatINR(p.cpl), formatNum(p.leads), formatINR(p.budget), `${(p.share * 100).toFixed(1)}%`
-          ]),
-          [
-            { text: "Total Digital Lead Gen", options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: "Integrated Multi-Channel Funnel", options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: formatINR(calculations.blendedCpl), options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: formatNum(calculations.totalLeads), options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: formatINR(calculations.totalDigitalLgSpends), options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: "100%", options: { bold: true, fill: { color: "F1F5F9" } } }
-          ]
-        ], { x: 0.8, y: 1.5, w: 11.73, fontSize: 10, border: { pt: 0.5, color: "CBD5E1" } });
-
-        // Slide 5: Total 90-Day Budget Bifurcation & Cost Metrics
-        const s5 = pptx.addSlide();
-        addHeader(s5, "Comprehensive 90-Day Budget & Cost Bifurcation", "Detailed Line-Item Breakdown vs. Revenue Realization");
-        s5.addTable([
-          [
-            { text: "Category", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Activity / Deliverable", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Strategic Scope", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            { text: "Allocated Spend", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } }
-          ],
-          ...calculations.fullExpenseItems.map(item => [
-            item.category, item.item, item.desc, formatINR(item.cost)
-          ]),
-          [
-            { text: "Total Advertising Spend", options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: `Revenue: ${formatINR(calculations.totalRevenue)}`, options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: `Advertising Cost: ${calculations.advertisingCostPct.toFixed(2)}% | CP Brokerage: ${expenses.cpBrokeragePct}%`, options: { bold: true, fill: { color: "F1F5F9" } } },
-            { text: formatINR(calculations.totalAdvertisingBudget), options: { bold: true, fill: { color: "F1F5F9" } } }
-          ]
-        ], { x: 0.8, y: 1.35, w: 11.73, fontSize: 9.5, border: { pt: 0.5, color: "CBD5E1" } });
-
-        // Slide 6: Channel Partner Activation
-        const s6 = pptx.addSlide();
-        addHeader(s6, "Channel Partner (CP) Activation Engine", "Network Scaling & Brokerage Engagement Blueprint");
-        s6.addTable([
-          [
-            { text: "Metric", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } },
-            ...monthNames.map(m => ({ text: m, options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } })),
-            { text: "Total Quarter", options: { bold: true, fill: { color: C_SLATE }, color: "FFFFFF" } }
-          ],
-          ["CAT A CP Activation", ...calculations.cpActivationData.map(c => c.catA), calculations.cpActivationData.reduce((a, b) => a + b.catA, 0)],
-          ["CAT B CP Activation", ...calculations.cpActivationData.map(c => c.catB), calculations.cpActivationData.reduce((a, b) => a + b.catB, 0)],
-          ["Physical 1-on-1 Meetings", ...calculations.cpActivationData.map(c => Math.round(c.physicalMeetings)), Math.round(calculations.cpActivationData.reduce((a, b) => a + b.physicalMeetings, 0))],
-          ["WhatsApp & Email Broadcast Outreach", ...calculations.cpActivationData.map(c => Math.round(c.whatsappOutreach)), Math.round(calculations.cpActivationData.reduce((a, b) => a + b.whatsappOutreach, 0))],
-          ["Digital Broker Outreach (Reach)", ...calculations.cpActivationData.map(c => c.digitalReach), calculations.cpActivationData.reduce((a, b) => a + b.digitalReach, 0)],
-          ["CP Site Visits Generated", ...calculations.cpActivationData.map(c => formatNum(c.visits)), formatNum(calculations.totalVisitsCP)],
-          ["CP Bookings Closed", ...calculations.cpActivationData.map(c => c.bookings), calculations.totalBookingsCP]
-        ], { x: 0.8, y: 1.6, w: 11.73, fontSize: 11, border: { pt: 1, color: "CBD5E1" } });
-
-        // Slide 7: Thank You Slide
-        const s7 = pptx.addSlide();
-        s7.background = { color: C_DARK };
-        s7.addText("THANK YOU", { x: 1.0, y: 2.5, w: 11.33, fontSize: 44, color: C_GOLD, bold: true, align: "center" });
-        s7.addText(`${projectName} - Media Plan & Growth Strategy`, { x: 1.0, y: 3.5, w: 11.33, fontSize: 18, color: "FFFFFF", align: "center" });
-
-        // Trigger file download
-        pptx.writeFile({ fileName: `${projectName.replace(/\s+/g, '_')}_Media_Plan_Deck.pptx` });
-      };
-
-      // Slide Navigation helper
-      const totalSlideCount = 8;
-      const nextSlide = () => setCurrentSlide(prev => Math.min(prev + 1, totalSlideCount));
-      const prevSlide = () => setCurrentSlide(prev => Math.max(prev - 1, 1));
-
-      return (
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Top Bar Navigation */}
-          <header className="flex flex-col md:flex-row justify-between items-center mb-8 pb-6 border-b border-slate-800 gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 text-xs font-bold rounded-full gold-gradient text-slate-950 uppercase tracking-wider">
-                  Real Estate Strategy
-                </span>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-white">
-                  Media Plan Engine <span className="text-slate-500 font-light">& PPT Generator</span>
-                </h1>
-              </div>
-              <p className="text-slate-400 text-sm mt-1">
-                Dynamic funnel calculations, line-item budget distributions, and exportable presentation decks.
-              </p>
-            </div>
-
-            {/* Navigation Tabs & Action Buttons */}
-            <div className="flex items-center gap-3">
-              <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-                <button
-                  onClick={() => setActiveTab('planner')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                    activeTab === 'planner'
-                      ? 'bg-amber-500 text-slate-950 shadow-lg'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Strategy Planner
-                </button>
-                <button
-                  onClick={() => setActiveTab('deck')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                    activeTab === 'deck'
-                      ? 'bg-amber-500 text-slate-950 shadow-lg'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Deck Preview
-                </button>
-              </div>
-
-              <button
-                onClick={handleDownloadPPT}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-slate-950 gold-gradient hover:brightness-110 shadow-lg transition-transform active:scale-95"
-              >
-                <span>Export .PPTX</span>
-              </button>
-            </div>
-          </header>
-
-          {/* Quick Presets Bar */}
-          <div className="flex flex-wrap items-center justify-between mb-8 p-4 glass-card rounded-2xl gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Plan Presets:</span>
-              <button
-                onClick={loadSkyluxePlan}
-                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 transition-colors"
-              >
-                Skyluxe Base (43 Bookings / 3M)
-              </button>
-              <button
-                onClick={load20BookingPlan}
-                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 transition-colors"
-              >
-                Fast-Track (20 Bookings / 6-6-8 Split)
-              </button>
-            </div>
-
-            {/* Quick KPIs badge */}
-            <div className="flex items-center gap-4 text-xs">
-              <div className="text-slate-400">Total Bookings: <span className="text-white font-bold">{calculations.totalBookings}</span></div>
-              <div className="text-slate-400">Total Revenue: <span className="text-amber-400 font-bold">{formatINR(calculations.totalRevenue)}</span></div>
-              <div className="text-slate-400">Adv Spend: <span className="text-white font-bold">{formatINR(calculations.totalAdvertisingBudget)}</span></div>
-              <div className="text-slate-400">Adv Cost: <span className="text-emerald-400 font-bold">{calculations.advertisingCostPct.toFixed(2)}%</span></div>
-            </div>
-          </div>
-
-          {/* TAB 1: STRATEGY PLANNER */}
-          {activeTab === 'planner' && (
-            <div className="space-y-8">
-              {/* Primary Config Section */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="glass-card p-5 rounded-2xl">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Project Name</label>
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    className="w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div className="glass-card p-5 rounded-2xl">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Avg Ticket Size (INR)</label>
-                  <input
-                    type="number"
-                    value={avgTicketSize}
-                    onChange={(e) => setAvgTicketSize(Number(e.target.value))}
-                    className="w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-amber-500"
-                  />
-                  <div className="text-[11px] text-slate-500 mt-1">e.g. ₹97,00,000 = 97 Lakhs</div>
-                </div>
-                <div className="glass-card p-5 rounded-2xl">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Conversion Benchmark (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={conversionRatio}
-                    onChange={(e) => setConversionRatio(Number(e.target.value))}
-                    className="w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-amber-500"
-                  />
-                  <div className="text-[11px] text-slate-500 mt-1">Bookings to Site Visits (Default: 9%)</div>
-                </div>
-                <div className="glass-card p-5 rounded-2xl">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Brokerage Outgo (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={expenses.cpBrokeragePct}
-                    onChange={(e) => setExpenses({ ...expenses, cpBrokeragePct: Number(e.target.value) })}
-                    className="w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-amber-500"
-                  />
-                  <div className="text-[11px] text-slate-500 mt-1">Standard CP Brokerage (Default: 3.0%)</div>
-                </div>
-              </div>
-
-              {/* Month-Wise Booking Targets & Splits */}
-              <div className="glass-card p-6 rounded-2xl">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                    Target Bookings & Month-Wise Distribution
-                  </h2>
-                  <span className="text-xs text-slate-400">Total Bookings: <strong className="text-amber-400">{calculations.totalBookings}</strong></span>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase">
-                        <th className="py-3 px-4">Channel / Month</th>
-                        {monthNames.map((m, i) => (
-                          <th key={i} className="py-3 px-4">
-                            <input
-                              type="text"
-                              value={m}
-                              onChange={(e) => {
-                                const copy = [...monthNames];
-                                copy[i] = e.target.value;
-                                setMonthNames(copy);
-                              }}
-                              className="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white w-28 focus:border-amber-500 outline-none"
-                            />
-                          </th>
-                        ))}
-                        <th className="py-3 px-4 text-right">Total Bookings</th>
-                        <th className="py-3 px-4 text-right">Required Visits</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-medium">
-                      <tr>
-                        <td className="py-3 px-4 text-slate-300 font-bold">Presales / Digital Bookings</td>
-                        {bookingsPS.map((val, i) => (
-                          <td key={i} className="py-3 px-4">
-                            <input
-                              type="number"
-                              value={val}
-                              onChange={(e) => {
-                                const copy = [...bookingsPS];
-                                copy[i] = Number(e.target.value);
-                                setBookingsPS(copy);
-                              }}
-                              className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-center focus:border-amber-500 outline-none"
-                            />
-                          </td>
-                        ))}
-                        <td className="py-3 px-4 text-right text-amber-400 font-bold">{calculations.totalBookingsPS}</td>
-                        <td className="py-3 px-4 text-right text-slate-400">{formatNum(calculations.totalVisitsPS)}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-4 text-slate-300 font-bold">Direct Walk-ins Bookings</td>
-                        {bookingsDirect.map((val, i) => (
-                          <td key={i} className="py-3 px-4">
-                            <input
-                              type="number"
-                              value={val}
-                              onChange={(e) => {
-                                const copy = [...bookingsDirect];
-                                copy[i] = Number(e.target.value);
-                                setBookingsDirect(copy);
-                              }}
-                              className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-center focus:border-amber-500 outline-none"
-                            />
-                          </td>
-                        ))}
-                        <td className="py-3 px-4 text-right text-amber-400 font-bold">{calculations.totalBookingsDirect}</td>
-                        <td className="py-3 px-4 text-right text-slate-400">{formatNum(calculations.totalVisitsDirect)}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-4 text-slate-300 font-bold">Channel Partner Bookings</td>
-                        {bookingsCP.map((val, i) => (
-                          <td key={i} className="py-3 px-4">
-                            <input
-                              type="number"
-                              value={val}
-                              onChange={(e) => {
-                                const copy = [...bookingsCP];
-                                copy[i] = Number(e.target.value);
-                                setBookingsCP(copy);
-                              }}
-                              className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-center focus:border-amber-500 outline-none"
-                            />
-                          </td>
-                        ))}
-                        <td className="py-3 px-4 text-right text-amber-400 font-bold">{calculations.totalBookingsCP}</td>
-                        <td className="py-3 px-4 text-right text-slate-400">{formatNum(calculations.totalVisitsCP)}</td>
-                      </tr>
-                      <tr className="bg-slate-900/80 font-bold text-white">
-                        <td className="py-3 px-4">Total Monthly Bookings</td>
-                        {calculations.monthlyData.map((m, i) => (
-                          <td key={i} className="py-3 px-4 text-center text-amber-400">{m.totalB}</td>
-                        ))}
-                        <td className="py-3 px-4 text-right text-amber-400 text-base">{calculations.totalBookings}</td>
-                        <td className="py-3 px-4 text-right text-amber-400 text-base">{formatNum(calculations.totalVisits)}</td>
-                      </tr>
-                      <tr className="text-xs text-slate-400">
-                        <td className="py-3 px-4 font-semibold">Cost Per Lead Benchmark (INR)</td>
-                        {cplPerMonth.map((val, i) => (
-                          <td key={i} className="py-3 px-4">
-                            <input
-                              type="number"
-                              value={val}
-                              onChange={(e) => {
-                                const copy = [...cplPerMonth];
-                                copy[i] = Number(e.target.value);
-                                setCplPerMonth(copy);
-                              }}
-                              className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-center focus:border-amber-500 outline-none"
-                            />
-                          </td>
-                        ))}
-                        <td colSpan={2} className="py-3 px-4 text-right">Blended CPL: {formatINR(calculations.blendedCpl)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Calculated Funnel Matrix Summary */}
-              <div className="glass-card p-6 rounded-2xl">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  Calculated Conversion & Spend Cascade
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-xs text-slate-400">Total Digital Leads</div>
-                    <div className="text-xl font-black text-white mt-1">{formatNum(calculations.totalLeads)}</div>
-                    <div className="text-[11px] text-slate-500 mt-1">@ 38% Qualification</div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-xs text-slate-400">Qualified Leads</div>
-                    <div className="text-xl font-black text-white mt-1">{formatNum(calculations.totalQualLeads)}</div>
-                    <div className="text-[11px] text-slate-500 mt-1">CPQL: {formatINR(calculations.blendedCpql)}</div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-xs text-slate-400">Presales Site Visits</div>
-                    <div className="text-xl font-black text-white mt-1">{formatNum(calculations.totalVisitsPS)}</div>
-                    <div className="text-[11px] text-slate-500 mt-1">SVS: {formatNum(calculations.totalSVS)}</div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-xs text-slate-400">Total Physical Visits</div>
-                    <div className="text-xl font-black text-amber-400 mt-1">{formatNum(calculations.totalVisits)}</div>
-                    <div className="text-[11px] text-slate-500 mt-1">Revisits: {formatNum(calculations.totalRevisits)}</div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-xs text-slate-400">Digital LG Spends</div>
-                    <div className="text-xl font-black text-white mt-1">{formatINR(calculations.totalDigitalLgSpends)}</div>
-                    <div className="text-[11px] text-slate-500 mt-1">Direct Ad Spends</div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-xs text-slate-400">Total Marketing Spends</div>
-                    <div className="text-xl font-black text-emerald-400 mt-1">{formatINR(calculations.totalDigitalSpends)}</div>
-                    <div className="text-[11px] text-slate-500 mt-1">+12% Branding Spends</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Offline & Production Expenses Adjustment */}
-              <div className="glass-card p-6 rounded-2xl">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                  Offline, Production & Incentive Cost Control
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <label className="text-xs text-slate-400">Hoardings / OOH (Total INR)</label>
-                    <input
-                      type="number"
-                      value={expenses.hoardings}
-                      onChange={(e) => setExpenses({ ...expenses, hoardings: Number(e.target.value) })}
-                      className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Society / Mall Activations (INR)</label>
-                    <input
-                      type="number"
-                      value={expenses.societyActivation}
-                      onChange={(e) => setExpenses({ ...expenses, societyActivation: Number(e.target.value) })}
-                      className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">UGC & Influencer Videos (INR)</label>
-                    <input
-                      type="number"
-                      value={expenses.ugcVideos}
-                      onChange={(e) => setExpenses({ ...expenses, ugcVideos: Number(e.target.value) })}
-                      className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">CP Gathering & Orientation (INR)</label>
-                    <input
-                      type="number"
-                      value={expenses.cpGathering}
-                      onChange={(e) => setExpenses({ ...expenses, cpGathering: Number(e.target.value) })}
-                      className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: SLIDE PRESENTATION DECK PREVIEW */}
-          {activeTab === 'deck' && (
-            <div className="space-y-6">
-              {/* Deck Navigation Controls */}
-              <div className="flex justify-between items-center bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-white">Slide {currentSlide} of {totalSlideCount}</span>
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalSlideCount }, (_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentSlide(idx + 1)}
-                        className={`w-3 h-3 rounded-full transition-all ${
-                          currentSlide === idx + 1 ? 'bg-amber-400 w-6' : 'bg-slate-700 hover:bg-slate-600'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={prevSlide}
-                    disabled={currentSlide === 1}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-xl text-sm font-bold text-white transition-colors"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    onClick={nextSlide}
-                    disabled={currentSlide === totalSlideCount}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-xl text-sm font-bold text-white transition-colors"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-
-              {/* 16:9 Widescreen Slide Container */}
-              <div className="relative w-full aspect-video rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden p-8 md:p-12 flex flex-col justify-between">
-                
-                {/* SLIDE 1: Title Slide */}
-                {currentSlide === 1 && (
-                  <div className="h-full flex flex-col justify-between">
-                    <div className="flex justify-between items-start">
-                      <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-xs rounded-full uppercase">
-                        Strategic Road Map
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium">Aug – Oct 2026</span>
-                    </div>
-                    <div>
-                      <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight">
-                        {projectName}
-                      </h1>
-                      <p className="text-2xl font-bold gold-text mt-2">
-                        WAY FORWARD MARKETING & SALES STRATEGY
-                      </p>
-                      <p className="text-slate-400 text-sm mt-3 max-w-xl">
-                        Comprehensive Multi-Channel Acquisition, Conversion Funnel, and Channel Partner Activation Blueprint.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-6 pt-6 border-t border-slate-800/80">
-                      <div>
-                        <div className="text-xs text-slate-500">Target Bookings</div>
-                        <div className="text-2xl font-bold text-white">{calculations.totalBookings} Units</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-slate-500">Total Projected Revenue</div>
-                        <div className="text-2xl font-bold text-amber-400">{formatINR(calculations.totalRevenue)}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-slate-500">Duration</div>
-                        <div className="text-2xl font-bold text-white">{durationMonths} Months ({monthNames.join(", ")})</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* SLIDE 2: Strategy & Sourcing Targets */}
-                {currentSlide === 2 && (
-                  <div className="h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center mb-6">
-                        <div>
-                          <h2 className="text-2xl font-black text-white">Wayforward Strategy & Sourcing Targets</h2>
-                          <p className="text-xs text-amber-400 font-medium">Channel-Wise Contribution & Demand Generation Matrix</p>
-                        </div>
-                        <span className="text-xs text-slate-400">Benchmark: {conversionRatio}% Visit-to-Booking</span>
-                      </div>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                          <thead>
-                            <tr className="bg-slate-900 text-slate-400 text-xs uppercase">
-                              <th className="py-3 px-4 rounded-l-lg">Channel Source</th>
-                              <th className="py-3 px-4">Estimated Leads</th>
-                              <th className="py-3 px-4">Estimated Walk-ins</th>
-                              <th className="py-3 px-4">Target Bookings</th>
-                              <th className="py-3 px-4 rounded-r-lg">Contribution</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-800 font-medium">
-                            <tr>
-                              <td className="py-3 px-4 text-white font-bold">Digital / Presales</td>
-                              <td className="py-3 px-4">{formatNum(calculations.totalLeads)}</td>
-                              <td className="py-3 px-4">{formatNum(calculations.totalVisitsPS)}</td>
-                              <td className="py-3 px-4 text-amber-400 font-bold">{calculations.totalBookingsPS}</td>
-                              <td className="py-3 px-4">{((calculations.totalBookingsPS / calculations.totalBookings) * 100).toFixed(0)}%</td>
-                            </tr>
-                            <tr>
-                              <td className="py-3 px-4 text-white font-bold">OOH / Direct Walk-ins</td>
-                              <td className="py-3 px-4 text-slate-500">As per Branding</td>
-                              <td className="py-3 px-4">{formatNum(calculations.totalVisitsDirect)}</td>
-                              <td className="py-3 px-4 text-amber-400 font-bold">{calculations.totalBookingsDirect}</td>
-                              <td className="py-3 px-4">{((calculations.totalBookingsDirect / calculations.totalBookings) * 100).toFixed(0)}%</td>
-                            </tr>
-                            <tr>
-                              <td className="py-3 px-4 text-white font-bold">Channel Partners</td>
-                              <td className="py-3 px-4 text-slate-500">As per Outreach</td>
-                              <td className="py-3 px-4">{formatNum(calculations.totalVisitsCP)}</td>
-                              <td className="py-3 px-4 text-amber-400 font-bold">{calculations.totalBookingsCP}</td>
-                              <td className="py-3 px-4">{((calculations.totalBookingsCP / calculations.totalBookings) * 100).toFixed(0)}%</td>
-                            </tr>
-                            <tr className="bg-slate-900/90 font-bold text-white">
-                              <td className="py-3 px-4 rounded-l-lg">Total Projected</td>
-                              <td className="py-3 px-4">{formatNum(calculations.totalLeads)}</td>
-                              <td className="py-3 px-4">{formatNum(calculations.totalVisits)}</td>
-                              <td className="py-3 px-4 text-amber-400 text-base">{calculations.totalBookings}</td>
-                              <td className="py-3 px-4 rounded-r-lg">100%</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 text-xs bg-slate-900/60 p-4 rounded-xl">
-                      <div>• High-intent digital campaigns to drive {formatNum(calculations.totalVisitsPS)} qualified presales visits.</div>
-                      <div>• Offline OOH presence across key junctions to secure {formatNum(calculations.totalVisitsDirect)} walk-ins.</div>
-                      <div>• Channel Partner engagement engine contributing {calculations.totalBookingsCP} bookings ({((calculations.totalBookingsCP / calculations.totalBookings) * 100).toFixed(0)}%).</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* SLIDE 3: Month-Wise Performance Funnel */}
-                {currentSlide === 3 && (
-                  <div className="h-full flex flex-col justify-between">
-                    <div>
-                      <h2 className="text-2xl font-black text-white">Month-Wise Funnel Targets</h2>
-                      <p className="text-xs text-amber-400 font-medium mb-4">Granular Spend vs. Volume Flow across 3 Quarters</p>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                          <thead>
-                            <tr className="bg-slate-900 text-slate-400 uppercase">
-                              <th className="py-2.5 px-3">Metric</th>
-                              {monthNames.map((m, i) => <th key={i} className="py-2.5 px-3">{m}</th>)}
-                              <th className="py-2.5 px-3 text-right">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-800">
-                            <tr>
-                              <td className="py-2 px-3 font-bold text-white">Total Marketing Spends</td>
-                              {calculations.monthlyData.map((m, i) => <td key={i} className="py-2 px-3">{formatINR(m.totalDigitalSpends)}</td>)}
-                              <td className="py-2 px-3 text-right font-bold text-amber-400">{formatINR(calculations.totalDigitalSpends)}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">Digital LG Spends</td>
-                              {calculations.monthlyData.map((m, i) => <td key={i} className="py-2 px-3">{formatINR(m.digitalLgSpends)}</td>)}
-                              <td className="py-2 px-3 text-right">{formatINR(calculations.totalDigitalLgSpends)}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">Total Leads Generated</td>
-                              {calculations.monthlyData.map((m, i) => <td key={i} className="py-2 px-3">{formatNum(m.totalLeads)}</td>)}
-                              <td className="py-2 px-3 text-right font-bold text-white">{formatNum(calculations.totalLeads)}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">Cost Per Lead (CPL)</td>
-                              {calculations.monthlyData.map((m, i) => <td key={i} className="py-2 px-3">{formatINR(m.cpl)}</td>)}
-                              <td className="py-2 px-3 text-right">{formatINR(calculations.blendedCpl)}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">Qualified Leads (CPQL)</td>
-                              {calculations.monthlyData.map((m, i) => <td key={i} className="py-2 px-3">{formatNum(m.qualLeads)}</td>)}
-                              <td className="py-2 px-3 text-right font-bold text-emerald-400">{formatNum(calculations.totalQualLeads)}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">Total Physical Visits</td>
-                              {calculations.monthlyData.map((m, i) => <td key={i} className="py-2 px-3">{formatNum(m.totalVisits)}</td>)}
-                              <td className="py-2 px-3 text-right font-bold text-white">{formatNum(calculations.totalVisits)}</td>
-                            </tr>
-                            <tr className="bg-amber-500/10 font-bold text-white">
-                              <td className="py-2 px-3">Total Monthly Bookings</td>
-                              {calculations.monthlyData.map((m, i) => <td key={i} className="py-2 px-3 text-amber-400">{m.totalB}</td>)}
-                              <td className="py-2 px-3 text-right text-amber-400 text-sm">{calculations.totalBookings}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    <div className="text-[11px] text-slate-500">Note: All calculations respect 38% qualification rate and 9% booking conversions.</div>
-                  </div>
-                )}
-
-                {/* SLIDE 4: Digital Platform Allocation */}
-                {currentSlide === 4 && (
-                  <div className="h-full flex flex-col justify-between">
-                    <div>
-                      <h2 className="text-2xl font-black text-white">Digital Platform Allocation & Strategy</h2>
-                      <p className="text-xs text-amber-400 font-medium mb-4">Channel Budgets, Audience Targeting, and Benchmark CPLs</p>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                          <thead>
-                            <tr className="bg-slate-900 text-slate-400 uppercase">
-                              <th className="py-2.5 px-3">Platform</th>
-                              <th className="py-2.5 px-3">Targeting Strategy</th>
-                              <th className="py-2.5 px-3">Est. CPL</th>
-                              <th className="py-2.5 px-3">Leads</th>
-                              <th className="py-2.5 px-3">Budget</th>
-                              <th className="py-2.5 px-3 text-right">% Share</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-800">
-                            {calculations.platforms.map((p, i) => (
-                              <tr key={i}>
-                                <td className="py-2.5 px-3 font-bold text-white">{p.name}</td>
-                                <td className="py-2.5 px-3 text-slate-300">{p.audience}</td>
-                                <td className="py-2.5 px-3">{formatINR(p.cpl)}</td>
-                                <td className="py-2.5 px-3 font-bold text-white">{formatNum(p.leads)}</td>
-                                <td className="py-2.5 px-3 text-amber-400 font-bold">{formatINR(p.budget)}</td>
-                                <td className="py-2.5 px-3 text-right text-slate-400">{(p.share * 100).toFixed(1)}%</td>
-                              </tr>
-                            ))}
-                            <tr className="bg-slate-900/90 font-bold text-white">
-                              <td className="py-2.5 px-3" colSpan={2}>Total Performance Marketing</td>
-                              <td className="py-2.5 px-3">{formatINR(calculations.blendedCpl)}</td>
-                              <td className="py-2.5 px-3">{formatNum(calculations.totalLeads)}</td>
-                              <td className="py-2.5 px-3 text-amber-400">{formatINR(calculations.totalDigitalLgSpends)}</td>
-                              <td className="py-2.5 px-3 text-right">100%</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-xs bg-slate-900/60 p-3 rounded-xl">
-                      <div>• Meta Lookalikes + Interest targeting drives 62.5% volume at optimized CPL.</div>
-                      <div>• Google Search captures high-intent hyperlocal searches (2 & 3 BHK luxury buyers).</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* SLIDE 5: Audience & Communication */}
-                {currentSlide === 5 && (
-                  <div className="h-full flex flex-col justify-between">
-                    <div>
-                      <h2 className="text-2xl font-black text-white">Target Audience & Communication Matrix</h2>
-                      <p className="text-xs text-amber-400 font-medium mb-6">Persona Mapping & Multi-Touch Messaging Framework</p>
-
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800">
-                          <span className="px-2.5 py-1 text-[10px] font-bold rounded bg-amber-500/20 text-amber-400 uppercase">1st Touch Interaction</span>
-                          <h3 className="text-base font-bold text-white mt-2">Lead Generation & Awareness</h3>
-                          <ul className="text-xs text-slate-300 mt-3 space-y-2">
-                            <li><strong>Audience:</strong> Age 28–60 | IT Professionals, Doctors, CAs, HNIs & NRIs.</li>
-                            <li><strong>Geographies:</strong> Primary Micromarket (10km radius) + Secondary West Pune.</li>
-                            <li><strong>Core Proposition:</strong> Central Landmark of Luxury, 85% Open Spaces, Japanese Lifestyle Amenities.</li>
-                            <li><strong>Content:</strong> CGI Teaser Walkthroughs, Location Advantage Reels, Festive Launch Offers.</li>
-                          </ul>
-                        </div>
-
-                        <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800">
-                          <span className="px-2.5 py-1 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-400 uppercase">2nd Touch Interaction</span>
-                          <h3 className="text-base font-bold text-white mt-2">Remarketing & Lead Nurturing</h3>
-                          <ul className="text-xs text-slate-300 mt-3 space-y-2">
-                            <li><strong>Audience:</strong> Website Visitors, Video Viewers (50%+), CRM Enquiries & Unconverted Site Visits.</li>
-                            <li><strong>Channels:</strong> Meta Remarketing, Google RLSA, WhatsApp Broadcasts, Direct Outreach.</li>
-                            <li><strong>Core Proposition:</strong> Construction Milestones, Limited Festive Inventory, Transparent Payment Plans.</li>
-                            <li><strong>Content:</strong> Actual Sample Flat Shoots, Customer Bytes, Urgent Invitation Passes.</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-slate-500">Automated WhatsApp chatbot nurturing ensures immediate lead engagement within 60 seconds.</div>
-                  </div>
-                )}
-
-                {/* SLIDE 6: Channel Partner Activation Engine */}
-                {currentSlide === 6 && (
-                  <div className="h-full flex flex-col justify-between">
-                    <div>
-                      <h2 className="text-2xl font-black text-white">Channel Partner (CP) Activation Engine</h2>
-                      <p className="text-xs text-amber-400 font-medium mb-4">Structured Brokerage Engagement & Site Visit Targets</p>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                          <thead>
-                            <tr className="bg-slate-900 text-slate-400 uppercase">
-                              <th className="py-2.5 px-3">Activation Metric</th>
-                              {monthNames.map((m, i) => <th key={i} className="py-2.5 px-3">{m}</th>)}
-                              <th className="py-2.5 px-3 text-right">Total Plan</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-800">
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">CAT A CP Activation</td>
-                              {calculations.cpActivationData.map((c, i) => <td key={i} className="py-2 px-3">{c.catA}</td>)}
-                              <td className="py-2 px-3 text-right font-bold text-white">{calculations.cpActivationData.reduce((a, b) => a + b.catA, 0)}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">CAT B CP Activation</td>
-                              {calculations.cpActivationData.map((c, i) => <td key={i} className="py-2 px-3">{c.catB}</td>)}
-                              <td className="py-2 px-3 text-right font-bold text-white">{calculations.cpActivationData.reduce((a, b) => a + b.catB, 0)}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">Physical 1-on-1 CP Meetings</td>
-                              {calculations.cpActivationData.map((c, i) => <td key={i} className="py-2 px-3">{Math.round(c.physicalMeetings)}</td>)}
-                              <td className="py-2 px-3 text-right font-bold text-amber-400">{Math.round(calculations.cpActivationData.reduce((a, b) => a + b.physicalMeetings, 0))}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-slate-300">WhatsApp & Email Outreach</td>
-                              {calculations.cpActivationData.map((c, i) => <td key={i} className="py-2 px-3">{Math.round(c.whatsappOutreach)}</td>)}
-                              <td className="py-2 px-3 text-right">{Math.round(calculations.cpActivationData.reduce((a, b) => a + b.whatsappOutreach, 0))}</td>
-                            </tr>
-                            <tr className="bg-slate-900/80 font-bold text-white">
-                              <td className="py-2 px-3">CP Site Visits Generated</td>
-                              {calculations.cpActivationData.map((c, i) => <td key={i} className="py-2 px-3">{formatNum(c.visits)}</td>)}
-                              <td className="py-2 px-3 text-right text-emerald-400">{formatNum(calculations.totalVisitsCP)}</td>
-                            </tr>
-                            <tr className="bg-amber-500/10 font-bold text-white">
-                              <td className="py-2 px-3">CP Bookings Closed</td>
-                              {calculations.cpActivationData.map((c, i) => <td key={i} className="py-2 px-3 text-amber-400">{c.bookings}</td>)}
-                              <td className="py-2 px-3 text-right text-amber-400 text-sm">{calculations.totalBookingsCP}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    <div className="text-xs text-slate-400 bg-slate-900/60 p-3 rounded-xl">
-                      Includes ₹{expenses.cpVisitIncentivePerVisit} per verified CP site visit + ₹{formatNum(expenses.cpBookingIncentivePerBooking)} festive booking bonus per unit.
-                    </div>
-                  </div>
-                )}
-
-                {/* SLIDE 7: Detailed 90-Day Budget & Revenue realization */}
-                {currentSlide === 7 && (
-                  <div className="h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center mb-3">
-                        <h2 className="text-2xl font-black text-white">90-Day Total Budget & Cost Bifurcation</h2>
-                        <span className="text-xs px-3 py-1 bg-emerald-500/20 text-emerald-400 font-bold rounded-full">
-                          Adv Cost: {calculations.advertisingCostPct.toFixed(2)}% of Revenue
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-xs max-h-72 overflow-y-auto custom-scrollbar pr-2">
-                        {calculations.fullExpenseItems.map((item, idx) => (
-                          <div key={idx} className="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 flex justify-between items-center">
-                            <div>
-                              <div className="font-bold text-white">{item.item}</div>
-                              <div className="text-[10px] text-slate-400">{item.desc}</div>
-                            </div>
-                            <div className="font-mono font-bold text-amber-400">{formatINR(item.cost)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-4 p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
-                      <div>
-                        <div className="text-[10px] text-slate-500 uppercase">Total Revenue</div>
-                        <div className="text-lg font-bold text-white">{formatINR(calculations.totalRevenue)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-slate-500 uppercase">Total Adv Budget</div>
-                        <div className="text-lg font-bold text-amber-400">{formatINR(calculations.totalAdvertisingBudget)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-slate-500 uppercase">Adv Cost %</div>
-                        <div className="text-lg font-bold text-emerald-400">{calculations.advertisingCostPct.toFixed(2)}%</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-slate-500 uppercase">Total Marketing Cost %</div>
-                        <div className="text-lg font-bold text-emerald-400">{calculations.totalMarketingCostPct.toFixed(2)}%</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* SLIDE 8: Thank You */}
-                {currentSlide === 8 && (
-                  <div className="h-full flex flex-col justify-center items-center text-center">
-                    <span className="px-4 py-1.5 rounded-full gold-gradient text-slate-950 font-black text-xs uppercase tracking-widest mb-4">
-                      Execution Ready
-                    </span>
-                    <h1 className="text-6xl font-black text-white tracking-tight">THANK YOU</h1>
-                    <p className="text-xl gold-text font-bold mt-2">{projectName} Media Plan & Way Forward Strategy</p>
-                    <div className="mt-8 flex gap-4">
-                      <button
-                        onClick={handleDownloadPPT}
-                        className="px-6 py-3 rounded-xl font-bold text-slate-950 gold-gradient shadow-xl hover:brightness-110"
-                      >
-                        Download Full PowerPoint Deck (.pptx)
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </div>
-          )}
-
+<body>
+
+<div id="boot-error" style="display:none;position:fixed;inset:0;background:#0f172a;color:#fff;font-family:sans-serif;padding:40px;z-index:9999;overflow:auto;"></div>
+<script>
+  window.addEventListener('error', function (e) {
+    var box = document.getElementById('boot-error');
+    if (!box) return;
+    box.style.display = 'block';
+    box.innerHTML = '<h2 style="color:#f59e0b;margin-bottom:12px;">Something failed to load</h2>' +
+      '<p style="margin-bottom:8px;">' + (e.message || 'Unknown script error') + '</p>' +
+      '<p style="color:#94a3b8;font-size:13px;">Source: ' + (e.filename || 'inline') + (e.lineno ? (':' + e.lineno) : '') + '</p>' +
+      '<p style="color:#94a3b8;font-size:13px;margin-top:16px;">This usually means a CDN script (Tailwind, Chart.js or PptxGenJS) was blocked by the network. Try a different network or disable content blockers, then refresh.</p>';
+  });
+</script>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" style="color:#d97706;"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-6 2 2-6 6-2z"/></svg>
+        <span id="sidebar-project-name">SKYLUXE</span>
+      </div>
+      <div class="sidebar-sub">Media Plan Studio</div>
+    </div>
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn" data-tab="planner">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 12h4"/></svg>
+        Strategy Planner
+      </button>
+      <button class="nav-tab-btn" data-tab="deck">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+        Presentation Deck (17 Slides)
+      </button>
+      <button class="nav-tab-btn" data-tab="export">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        Export PPTX
+      </button>
+    </nav>
+    <div class="sidebar-summary">
+      <div class="sidebar-summary-row"><span>Bookings</span><b id="sidebar-bookings">43</b></div>
+      <div class="sidebar-summary-row"><span>Revenue</span><b id="sidebar-revenue">₹41.71 Cr</b></div>
+      <div class="sidebar-summary-row"><span>Duration</span><b id="sidebar-duration">3 mo</b></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- TAB 1: Strategy Planner -->
+    <section id="tab-planner" class="tab-panel active"></section>
+
+    <!-- TAB 2: Presentation Deck -->
+    <section id="tab-deck" class="tab-panel">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold font-display text-slate-900">Presentation Deck</h2>
+        <p class="text-sm text-slate-500 mt-1">Live 16:9 preview of all 17 slides — every number is generated from the Strategy Planner.</p>
+        <div class="ruler mt-3" style="width:160px;"></div>
+      </div>
+
+      <div class="deck-toolbar" id="slide-pills"></div>
+
+      <div class="deck-stage-wrap" id="deck-stage-wrap">
+        <div id="slide-stage"></div>
+        <button class="nav-arrow left" id="slide-prev" type="button" aria-label="Previous slide">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="nav-arrow right" id="slide-next" type="button" aria-label="Next slide">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <div class="deck-controls">
+        <div class="slide-dots" id="slide-dots"></div>
+        <button class="fullscreen-btn" id="slide-fullscreen" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+          Fullscreen
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 3: Export PPTX -->
+    <section id="tab-export" class="tab-panel">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold font-display text-slate-900">Export Presentation</h2>
+        <p class="text-sm text-slate-500 mt-1">Generate a genuine, styled 16:9 PowerPoint deck — all 17 slides, matching the live preview exactly.</p>
+        <div class="ruler mt-3" style="width:160px;"></div>
+      </div>
+
+      <div class="export-card">
+        <div>
+          <div class="font-semibold text-slate-800" id="export-file-label">SKYLUXE — Way Forward Plan.pptx</div>
+          <div class="text-xs text-slate-500 mt-1">17 slides · Widescreen 16:9 · Tables, metric cards & persona layouts</div>
         </div>
-      );
-    }
+        <button class="export-btn" id="export-btn" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+          Download Complete Presentation (.pptx)
+        </button>
+      </div>
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-  </script>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-card-title">Conversion Funnel</div>
+          <canvas id="funnel-chart" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">Budget Breakdown</div>
+          <canvas id="budget-chart" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:24px;padding:20px;">
+        <div class="text-sm font-semibold text-slate-700 mb-3">Plan Summary</div>
+        <div id="export-summary" class="grid grid-cols-4 gap-3"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="js/calculator.js"></script>
+<script src="js/pptx-generator.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
