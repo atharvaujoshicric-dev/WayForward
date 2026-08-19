@@ -26,6 +26,17 @@
   let model = C.computeModel(state);
   let currentTab = 'planner';
   let currentSlide = 0;
+  let autoSyncVisits = true; // easy mode: visits auto-derive from bookings unless the user opts out
+
+  function distributeEvenly(total, n) {
+    total = Math.round(Number(total) || 0);
+    n = Math.max(1, n);
+    const base = Math.floor(total / n);
+    let rem = total - base * n;
+    const arr = new Array(n).fill(base);
+    for (let i = n - 1; rem > 0; i--, rem--) arr[i] += 1;
+    return arr;
+  }
 
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 
@@ -71,16 +82,25 @@
     return input;
   }
 
-  function monthMatrix(labelText, months, values, onChange) {
+  function monthMatrix(labelText, months, stateKey, opts) {
+    opts = opts || {};
     const wrap = el('div', { class: 'mb-3' });
     wrap.appendChild(el('span', { class: 'field-label' }, [labelText]));
     const grid = el('div', { class: 'grid gap-2', style: `grid-template-columns:repeat(${months.length},minmax(0,1fr))` });
     months.forEach((m, i) => {
+      // IMPORTANT: read state[stateKey] fresh at edit-time (not a snapshot captured at render
+      // time) so editing one cell never reverts a previous edit to a sibling cell.
+      const input = numberInput(state[stateKey][i] || 0, v => {
+        const arr = state[stateKey].slice();
+        arr[i] = v;
+        const patch = { [stateKey]: arr };
+        if (opts.onArrayChange) Object.assign(patch, opts.onArrayChange(arr) || {});
+        setState(patch);
+      });
+      if (opts.disabled) { input.disabled = true; input.classList.add('input-disabled'); }
       const col = el('div', {}, [
         el('div', { class: 'text-[10px] text-slate-400 mb-1 truncate' }, [m]),
-        numberInput(values[i] || 0, v => {
-          const next = values.slice(); next[i] = v; onChange(next);
-        }),
+        input,
       ]);
       grid.appendChild(col);
     });
@@ -166,33 +186,101 @@
     basicGrid.appendChild(field('CP Brokerage %', numberInput((state.cpBrokeragePercent * 100).toFixed(2), v => setState({ cpBrokeragePercent: Number(v) / 100 }), { step: 0.5 })));
     root.appendChild(sectionCard('Basic Parameters', ICONS.building, basicGrid));
 
-    /* Bookings */
+    /* Bookings — quick total distributor + monthly grid */
     const bookingsWrap = el('div');
-    bookingsWrap.appendChild(monthMatrix('Presales / Digital Bookings', model.months, state.bookingsPS, v => setState({ bookingsPS: v })));
-    bookingsWrap.appendChild(monthMatrix('Direct / Walk-in Bookings', model.months, state.bookingsDirect, v => setState({ bookingsDirect: v })));
-    bookingsWrap.appendChild(monthMatrix('Channel Partner Bookings', model.months, state.bookingsCP, v => setState({ bookingsCP: v })));
+    const totalNow = model.bookingsPS_total + model.bookingsDirect_total + model.bookingsCP_total;
+    const psPctNow = totalNow > 0 ? Math.round((model.bookingsPS_total / totalNow) * 100) : 30;
+    const directPctNow = totalNow > 0 ? Math.round((model.bookingsDirect_total / totalNow) * 100) : 20;
+    const cpPctNow = Math.max(0, 100 - psPctNow - directPctNow);
+
+    bookingsWrap.appendChild(el('p', { class: 'text-xs text-slate-500 mb-3' }, ['The easiest way to set targets: enter one total and a source split, then distribute it evenly across your months. You can still fine-tune any individual month below.']));
+    const quickBox = el('div', { class: 'quick-fill-box' });
+    const totalInput = numberInput(totalNow, () => {}, { step: 1 });
+    const psPctInput = numberInput(psPctNow, () => {}, { step: 1 });
+    const directPctInput = numberInput(directPctNow, () => {}, { step: 1 });
+    const cpPctInput = numberInput(cpPctNow, () => {}, { step: 1 });
+    quickBox.appendChild(el('div', { class: 'grid grid-cols-4 gap-3' }, [
+      field('Total Bookings', totalInput),
+      field('Presales / Digital %', psPctInput),
+      field('Direct / Walk-in %', directPctInput),
+      field('Channel Partner %', cpPctInput),
+    ]));
+    const distributeBtn = el('button', { type: 'button', class: 'autofill-btn' }, ['Distribute Evenly Across Months']);
+    distributeBtn.addEventListener('click', () => {
+      const total = Math.round(Number(totalInput.value) || 0);
+      const psPct = Number(psPctInput.value) || 0, directPct = Number(directPctInput.value) || 0;
+      const psCount = Math.round(total * psPct / 100);
+      const directCount = Math.round(total * directPct / 100);
+      const cpCount = Math.max(0, total - psCount - directCount);
+      const bPS = distributeEvenly(psCount, model.n);
+      const bDirect = distributeEvenly(directCount, model.n);
+      const bCP = distributeEvenly(cpCount, model.n);
+      const patch = { bookingsPS: bPS, bookingsDirect: bDirect, bookingsCP: bCP };
+      if (autoSyncVisits) {
+        patch.visitsPS = C.deriveVisits(bPS, state.conversionRate);
+        patch.visitsDirect = C.deriveVisits(bDirect, state.conversionRate);
+        patch.visitsCP = C.deriveVisits(bCP, state.conversionRate);
+      }
+      setState(patch);
+      renderPlanner();
+    });
+    quickBox.appendChild(el('div', { class: 'flex justify-end mt-2' }, [distributeBtn]));
+    bookingsWrap.appendChild(quickBox);
+
+    bookingsWrap.appendChild(el('div', { class: 'text-[11px] font-semibold text-slate-500 mb-2 uppercase tracking-wide mt-4' }, ['Fine-Tune Individual Months']));
+    bookingsWrap.appendChild(monthMatrix('Presales / Digital Bookings', model.months, 'bookingsPS', {
+      onArrayChange: arr => autoSyncVisits ? { visitsPS: C.deriveVisits(arr, state.conversionRate) } : {},
+    }));
+    bookingsWrap.appendChild(monthMatrix('Direct / Walk-in Bookings', model.months, 'bookingsDirect', {
+      onArrayChange: arr => autoSyncVisits ? { visitsDirect: C.deriveVisits(arr, state.conversionRate) } : {},
+    }));
+    bookingsWrap.appendChild(monthMatrix('Channel Partner Bookings', model.months, 'bookingsCP', {
+      onArrayChange: arr => autoSyncVisits ? { visitsCP: C.deriveVisits(arr, state.conversionRate) } : {},
+    }));
     const bookingsTotals = el('div', { class: 'flex gap-6 text-xs font-mono text-slate-500 mt-2 border-t pt-3', id: 'bookings-totals' });
     bookingsWrap.appendChild(bookingsTotals);
     root.appendChild(sectionCard('Target Bookings & Monthly Split', ICONS.target, bookingsWrap));
 
-    /* Site Visits — directly editable, per source */
+    /* Site Visits — auto-synced by default, or directly editable per source */
     const visitsWrap = el('div');
-    visitsWrap.appendChild(el('p', { class: 'text-xs text-slate-500 mb-3' }, ['Set your site-visit targets directly — e.g. 80 visits across 3 months — split by source. The implied conversion % is calculated from what you enter here, it doesn\'t drive the numbers.']));
-    const autoFillRow = el('div', { class: 'flex justify-end mb-2' });
-    const autoFillBtn = el('button', { type: 'button', class: 'autofill-btn' }, [`Auto-fill from ${(state.conversionRate * 100).toFixed(1)}% Benchmark`]);
-    autoFillBtn.addEventListener('click', () => {
-      setState({
-        visitsPS: C.deriveVisits(state.bookingsPS, state.conversionRate),
-        visitsDirect: C.deriveVisits(state.bookingsDirect, state.conversionRate),
-        visitsCP: C.deriveVisits(state.bookingsCP, state.conversionRate),
-      });
+    visitsWrap.appendChild(el('p', { class: 'text-xs text-slate-500 mb-3' }, ['By default visits are calculated automatically from your bookings and conversion benchmark. Turn this off if you want to set a specific visits target — e.g. 20 bookings but 80 visits across 3 months — split by source.']));
+
+    const syncRow = el('label', { class: 'sync-toggle-row' });
+    const syncCheckbox = el('input', { type: 'checkbox' });
+    syncCheckbox.checked = autoSyncVisits;
+    syncCheckbox.addEventListener('change', e => {
+      autoSyncVisits = e.target.checked;
+      if (autoSyncVisits) {
+        setState({
+          visitsPS: C.deriveVisits(state.bookingsPS, state.conversionRate),
+          visitsDirect: C.deriveVisits(state.bookingsDirect, state.conversionRate),
+          visitsCP: C.deriveVisits(state.bookingsCP, state.conversionRate),
+        });
+      }
       renderPlanner();
     });
-    autoFillRow.appendChild(autoFillBtn);
-    visitsWrap.appendChild(autoFillRow);
-    visitsWrap.appendChild(monthMatrix('Presales / Digital Visits', model.months, state.visitsPS, v => setState({ visitsPS: v })));
-    visitsWrap.appendChild(monthMatrix('Direct / Walk-in Visits', model.months, state.visitsDirect, v => setState({ visitsDirect: v })));
-    visitsWrap.appendChild(monthMatrix('Channel Partner Visits', model.months, state.visitsCP, v => setState({ visitsCP: v })));
+    syncRow.appendChild(syncCheckbox);
+    syncRow.appendChild(el('span', {}, ['Automatically calculate visits from bookings (recommended)']));
+    visitsWrap.appendChild(syncRow);
+
+    if (!autoSyncVisits) {
+      const autoFillRow = el('div', { class: 'flex justify-end mb-2 mt-2' });
+      const autoFillBtn = el('button', { type: 'button', class: 'autofill-btn' }, [`Auto-fill from ${(state.conversionRate * 100).toFixed(1)}% Benchmark`]);
+      autoFillBtn.addEventListener('click', () => {
+        setState({
+          visitsPS: C.deriveVisits(state.bookingsPS, state.conversionRate),
+          visitsDirect: C.deriveVisits(state.bookingsDirect, state.conversionRate),
+          visitsCP: C.deriveVisits(state.bookingsCP, state.conversionRate),
+        });
+        renderPlanner();
+      });
+      autoFillRow.appendChild(autoFillBtn);
+      visitsWrap.appendChild(autoFillRow);
+    }
+
+    visitsWrap.appendChild(monthMatrix('Presales / Digital Visits', model.months, 'visitsPS', { disabled: autoSyncVisits }));
+    visitsWrap.appendChild(monthMatrix('Direct / Walk-in Visits', model.months, 'visitsDirect', { disabled: autoSyncVisits }));
+    visitsWrap.appendChild(monthMatrix('Channel Partner Visits', model.months, 'visitsCP', { disabled: autoSyncVisits }));
     const visitsWarning = el('div', { class: 'warning-banner', id: 'visits-warning' });
     visitsWrap.appendChild(visitsWarning);
     const visitsTotals = el('div', { class: 'grid grid-cols-4 gap-3 text-xs font-mono text-slate-500 mt-2 border-t pt-3', id: 'visits-totals' });
@@ -201,7 +289,7 @@
 
     /* Digital benchmark CPLs & platform ratios */
     const digitalWrap = el('div');
-    digitalWrap.appendChild(monthMatrix('Cost Per Lead (CPL) by Month (₹)', model.months, state.cplMonthly, v => setState({ cplMonthly: v })));
+    digitalWrap.appendChild(monthMatrix('Cost Per Lead (CPL) by Month (₹)', model.months, 'cplMonthly'));
     digitalWrap.appendChild(el('div', { class: 'text-[11px] font-semibold text-slate-500 mb-2 uppercase tracking-wide mt-4' }, ['Platform Weight of Lead-Gen Budget & Benchmark CPL']));
     const platformRows = el('div', { class: 'space-y-3' });
     [['meta', 'Meta / Facebook'], ['pmax', 'Google Pmax + Demand Gen'], ['search', 'Google Search'], ['experimental', 'Experimental / LinkedIn / Native'], ['nri', 'NRI Campaigns — USA/GCC']].forEach(([key, label]) => {
@@ -218,7 +306,7 @@
       platformRows.appendChild(row);
     });
     digitalWrap.appendChild(platformRows);
-    root.appendChild(sectionCard('Digital Benchmark CPLs & Platform Ratios', ICONS.sliders, digitalWrap));
+    root.appendChild(sectionCard('Digital Benchmark CPLs & Platform Ratios (Advanced)', ICONS.sliders, digitalWrap, false));
 
     /* OOH, production & CP incentive settings */
     const oohGrid = el('div', { class: 'grid grid-cols-2 gap-x-4' });
@@ -243,17 +331,17 @@
     ]);
     oohWrap.appendChild(hoardGrid);
     oohWrap.appendChild(el('div', { class: 'text-xs text-slate-500 mt-1', id: 'hoarding-total' }));
-    root.appendChild(sectionCard('OOH, Production & CP Incentive Settings', ICONS.megaphone, oohWrap));
+    root.appendChild(sectionCard('OOH, Production & CP Incentive Settings (Advanced)', ICONS.megaphone, oohWrap, false));
 
     /* CP activation targets */
     const cpWrap = el('div');
-    cpWrap.appendChild(monthMatrix('CAT A CP Activation Targets', model.months, state.catA, v => setState({ catA: v })));
-    cpWrap.appendChild(monthMatrix('CAT B CP Activation Targets', model.months, state.catB, v => setState({ catB: v })));
-    cpWrap.appendChild(monthMatrix('CP Digital Reach', model.months, state.cpDigitalReach, v => setState({ cpDigitalReach: v })));
-    root.appendChild(sectionCard('Channel Partner Activation Targets', ICONS.users, cpWrap, false));
+    cpWrap.appendChild(monthMatrix('CAT A CP Activation Targets', model.months, 'catA'));
+    cpWrap.appendChild(monthMatrix('CAT B CP Activation Targets', model.months, 'catB'));
+    cpWrap.appendChild(monthMatrix('CP Digital Reach', model.months, 'cpDigitalReach'));
+    root.appendChild(sectionCard('Channel Partner Activation Targets (Advanced)', ICONS.users, cpWrap, false));
 
     /* Historical / reporting data */
-    root.appendChild(sectionCard('Historical Reporting Data (Slides 2–5)', ICONS.calendar, renderHistoricalEditors(), false));
+    root.appendChild(sectionCard('Historical Reporting Data — Slides 2–5 (Advanced)', ICONS.calendar, renderHistoricalEditors(), false));
 
     updateComputedBits();
   }
